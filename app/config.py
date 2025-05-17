@@ -1,4 +1,4 @@
-from pydantic import BaseSettings 
+from pydantic_settings import BaseSettings 
 from functools import lru_cache # Fornece funções de ordem superior e decoradores, caching inteligente
 
 class Settings(BaseSettings):
@@ -9,11 +9,18 @@ class Settings(BaseSettings):
     SCOPE: str
     AUTHORITY: str
 
-class Config:
-    env_file = ".env"
-    env_file_encoding = "utf-8"
+    @property
+    def AUTHORITY(self):
+        return f"https://login.microsoftonline.com/`{self.TENANT_ID}"
 
-@lru_cache() # Least Recently Used, guarda em memória o resultado da função na primeira vez que ela for chamada. 
+    @property
+    def GRAPH_API_ENDPOINT(self):
+        return "https://graph.microsoft.com/v1.0"
+    
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
+@lru_cache
 def get_settings() -> Settings:
     return Settings()
-
