@@ -1,3 +1,9 @@
+"""
+Arquivo principal da aplicação FastAPI.
+Responsável por inicializar o app, configurar middlewares e incluir rotas.
+"""
+# Middlewares: usado para registrar logs de todas as requisições recebidas e respostas enviadas, além de capturar e registrar exceções.
+# Permite adicionar funcionalidades como autenticação, logging, tratamento de erros e manipulação de cabeçalhos de forma centralizada, sem precisar repetir código em cada rota. 
 from fastapi import FastAPI, Request
 from app.routes import message_routes
 from app.utils.logger import logger 

@@ -1,3 +1,7 @@
+"""
+Define as rotas relacionadas ao envio de mensagens na API Teams.
+Utiliza FastAPI para expor endpoint de envio de mensagens.
+"""
 from fastapi import APIRouter, HTTPException
 from app.models.message import MessageRequest
 from app.services.teams_service import TeamsService
@@ -13,5 +17,6 @@ async def send_message(message: MessageRequest):
             content=message.message
         )
         return {"status": "sent", "data": response}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao enviar mensagem: {str(e)}")
+    except Exception:
+        # Não expõe detalhes internos para o cliente
+        raise HTTPException(status_code=500, detail="Erro ao enviar mensagem.")

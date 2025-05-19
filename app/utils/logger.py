@@ -1,3 +1,7 @@
+"""
+Configura o logger para a aplicação Teams API.
+Utiliza python-json-logger para formatação estruturada dos logs.
+"""
 import logging
 from pythonjsonlogger import jsonlogger
 

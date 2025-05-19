@@ -1,3 +1,7 @@
+"""
+Arquivo principal de configuração do projeto.
+Define a classe Settings para carregar variáveis de ambiente e configurações da API Teams.
+"""
 from pydantic_settings import BaseSettings 
 from functools import lru_cache # Fornece funções de ordem superior e decoradores, caching inteligente
 
