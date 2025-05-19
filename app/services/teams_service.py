@@ -15,7 +15,8 @@ class TeamsService:
         """
         self.settings = get_settings()
         self.base_url = self.settings.GRAPH_API_ENDPOINT
-        self.token_url = f"https://login.microsoftonline.com/{self.settings.TENANT_ID}/v2.0/token"
+        self.token_url = f"{self.settings.AUTHORITY}/{self.settings.TENANT_ID}/oauth2/v2.0/token"
+
         logger.info(f"URL de token configurada: {self.token_url}")
         # Log extra para depuração
         print(f"[DEBUG] TENANT_ID: {self.settings.TENANT_ID}")
@@ -32,13 +33,14 @@ class TeamsService:
             'scope': self.settings.SCOPE,
             'grant_type': 'client_credentials'
         }
-        logger.info(f"[DEBUG] Corpo da requisição para token: {data}")
+
+        logger.info(f"[DEBUG] Corpo da requisição para token", extra={"data": data})
         logger.info("Solicitando token de acesso ao Azure AD", extra={"url": self.token_url})
 
         try:
             response = requests.post(self.token_url, data=data)
             response.raise_for_status()
-            token = response.json().get('access_token')
+            token = response.json().get("access_token")
 
             if not token:
                 logger.error("Token não encontrado na resposta!", extra={"resposta": response.text})
@@ -63,11 +65,17 @@ class TeamsService:
         """
         Retorna os headers necessários para requisições autenticadas na API Graph.
         """
-        return {
-            'Authorization': f'Bearer {self.get_access_token()}',
-            'Content-Type': 'application/json'
+        token = self.get_access_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
         }
-    
+
+        safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
+        logger.debug("Cabeçalhos preparados (seguros)", extra={"headers": safe_headers})
+
+        return headers
+
     def get_user_id_by_email(self, email: str) -> str:
         """
         Busca o ID do usuário no Microsoft Teams a partir do e-mail fornecido.
@@ -81,18 +89,33 @@ class TeamsService:
         if not re.match(email_regex, email):
             logger.warning("E-mail inválido fornecido para busca de usuário.")
             raise ValueError("Formato de e-mail inválido.")
+        
         headers = self.get_headers()
         url = f"{self.base_url}/users/{email}"
+
+        safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
+        logger.info("Buscando usuário pelo e-mail", extra={"email": email, "url": url, "headers": safe_headers})
+
         try:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             user_id = response.json().get("id")
+
             if not user_id:
-                logger.warning("ID de usuário não encontrado para o e-mail informado.")
+                logger.warning("ID de usuário não encontrado para o e-mail informado", extra={"email": email})
                 raise ValueError("Usuário não encontrado.")
+
+            logger.info("ID de usuário obtido com sucesso", extra={"user_id": user_id})
             return user_id
+        
         except requests.exceptions.RequestException as e:
-            logger.error("Erro ao buscar usuário no Graph API.")
+            status = e.response.status_code if e.response else None
+            body = e.response.text if e.response else "Sem resposta"
+            logger.error("Erro ao buscar usuário no Graph API", extra={
+                "email": email,
+                "status_code": status,
+                "response": body
+            })
             raise ValueError("Erro ao buscar usuário.") from e
     
     def create_chat_with_user(self, user_id: str) -> str:
@@ -105,6 +128,7 @@ class TeamsService:
         """
         headers = self.get_headers()
         url = f"{self.base_url}/chats"
+
         payload = {
             "chatType": "oneOnOne",
             "members": [{
@@ -113,14 +137,22 @@ class TeamsService:
                 "user@odata.bind": f"{self.base_url}/users('{user_id}')"
             }]
         }
+
+        safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
+
+        logger.debug("")
+        logger.debug("Cabeçalhos enviados", extra={"headers": safe_headers})
+
         try:
             response = requests.post(url, headers=headers, json=payload)
             response.raise_for_status()
             chat_id = response.json().get("id")
+
             if not chat_id:
                 logger.warning("ID do chat não retornado pela API.")
                 raise ValueError("Falha ao criar chat.")
             return chat_id
+
         except requests.exceptions.RequestException as e:
             logger.error("Erro ao criar chat no Graph API.")
             raise ValueError("Erro ao criar chat.") from e

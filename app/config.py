@@ -11,10 +11,8 @@ class Settings(BaseSettings):
     CLIENT_SECRET: str
     TENANT_ID: str
     SCOPE: str
-
-    @property
-    def GRAPH_API_ENDPOINT(self):
-        return "https://graph.microsoft.com/v1.0"
+    AUTHORITY: str
+    GRAPH_API_ENDPOINT: str
     
     class Config:
         env_file = ".env"
