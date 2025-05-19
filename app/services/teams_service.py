@@ -16,6 +16,7 @@ class TeamsService:
         self.settings = get_settings()
         self.base_url = self.settings.GRAPH_API_ENDPOINT
         self.token_url = f"{self.settings.AUTHORITY}/v2.0/token"
+        logger.info(f"URL de token configurada: {self.token_url}")
 
     def get_access_token(self):
         """

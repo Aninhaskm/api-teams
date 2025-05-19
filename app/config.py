@@ -14,10 +14,6 @@ class Settings(BaseSettings):
     AUTHORITY: str
 
     @property
-    def AUTHORITY(self):
-        return f"https://login.microsoftonline.com/`{self.TENANT_ID}"
-
-    @property
     def GRAPH_API_ENDPOINT(self):
         return "https://graph.microsoft.com/v1.0"
     
