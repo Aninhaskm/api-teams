@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     CLIENT_SECRET: str
     TENANT_ID: str
     SCOPE: str
-    AUTHORITY: str
 
     @property
     def GRAPH_API_ENDPOINT(self):

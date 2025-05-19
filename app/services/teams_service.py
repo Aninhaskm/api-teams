@@ -15,8 +15,11 @@ class TeamsService:
         """
         self.settings = get_settings()
         self.base_url = self.settings.GRAPH_API_ENDPOINT
-        self.token_url = f"{self.settings.AUTHORITY}/v2.0/token"
+        self.token_url = f"https://login.microsoftonline.com/{self.settings.TENANT_ID}/v2.0/token"
         logger.info(f"URL de token configurada: {self.token_url}")
+        # Log extra para depuração
+        print(f"[DEBUG] TENANT_ID: {self.settings.TENANT_ID}")
+        print(f"[DEBUG] token_url: {self.token_url}")
 
     def get_access_token(self):
         """
@@ -29,6 +32,7 @@ class TeamsService:
             'scope': self.settings.SCOPE,
             'grant_type': 'client_credentials'
         }
+        logger.info(f"[DEBUG] Corpo da requisição para token: {data}")
         logger.info("Solicitando token de acesso ao Azure AD", extra={"url": self.token_url})
 
         try:
