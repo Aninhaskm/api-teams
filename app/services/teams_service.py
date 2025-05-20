@@ -84,7 +84,8 @@ class TeamsService:
         Returns:
             str: ID do usuário encontrado.
         """
-        # Validação de e-mail para evitar entradas maliciosas
+        # Validação de e-mail para evitar entradas maliciosas, define o formato esperado
+        # e verifica se o e-mail corresponde a esse formato.
         email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
         if not re.match(email_regex, email):
             logger.warning("E-mail inválido fornecido para busca de usuário.")
@@ -138,19 +139,26 @@ class TeamsService:
             }]
         }
 
+# Cria um novo dicionário chamado safe_headers, onde os valores de Authorization são substituídos por "***"
+        # para evitar exposição de informações sensíveis nos logs
         safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
 
-        logger.debug("")
+        logger.info("Iniciando criação de chat com o usuário", extra={"user_id": user_id, "url": url})
         logger.debug("Cabeçalhos enviados", extra={"headers": safe_headers})
+        logger.debug("Corpo da requisição", extra={"payload": payload})
 
         try:
             response = requests.post(url, headers=headers, json=payload)
+            logger.debug("Resposta da API", extra={"status_code": response.status_code, "body": response.text})
+
             response.raise_for_status()
             chat_id = response.json().get("id")
 
             if not chat_id:
                 logger.warning("ID do chat não retornado pela API.")
                 raise ValueError("Falha ao criar chat.")
+
+            logger.info("Chat criado com sucesso", extra={"chat_id": chat_id})
             return chat_id
 
         except requests.exceptions.RequestException as e:
@@ -168,22 +176,39 @@ class TeamsService:
             dict: Resposta da API Graph após envio da mensagem.
         """
         logger.info("Iniciando envio de mensagem")
+
         try:
             user_id = self.get_user_id_by_email(user_email)
-            logger.info("ID do usuário obtido com sucesso")
+            logger.info("ID do usuário obtido com sucesso", extra={"user_id": user_id})
+
             chat_id = self.create_chat_with_user(user_id)
-            logger.info("Chat criado com sucesso")
+            logger.info("Chat criado com sucesso", extra={"chat_id": chat_id})
+
             headers = self.get_headers()
+            safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
             url = f"{self.base_url}/chats/{chat_id}/messages"
+    
             payload = {
                 "body": {
                     "content": content
                 }
             }
-            response = requests.post(url, headers=headers, json=payload)
+
+            logger.info("Enviando mensagem para o chat", extra={"url": url})
+            logger.debug("Cabeçalhos enviados", extra={"headers": safe_headers})
+            logger.debug("Corpo da requisição", extra={"payload": payload})
+
+            response = requests.post(url, headers=safe_headers, json=payload)
+            logger.debug("Resposta da API", extra={"status_code": response.status_code, "body": response.text})
             response.raise_for_status()
-            logger.info("Mensagem enviada com sucesso")
+
+            logger.info("Mensagem enviada com sucesso", extra={"chat_id": chat_id, "user_email": user_email})
             return response.json()
-        except Exception:
-            logger.error("Falha ao enviar mensagem.")
+        
+        except requests.exceptions.RequestException as e:
+            logger.error("Erro HTTP ao enviar a mensagem para o Graph API", extra={"erro": str(e)})
             raise ValueError("Erro ao enviar mensagem.")
+
+        except Exception as e:
+            logger.exception("Erro inesperado ao enviar mensagem")
+            raise ValueError("Erro inesperado ao enviar mensagem.") from e
