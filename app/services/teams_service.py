@@ -17,10 +17,9 @@ class TeamsService:
         self.base_url = self.settings.GRAPH_API_ENDPOINT
         self.token_url = f"{self.settings.AUTHORITY}/{self.settings.TENANT_ID}/oauth2/v2.0/token"
 
-        logger.info(f"URL de token configurada: {self.token_url}")
-        # Log extra para depuração
-        print(f"[DEBUG] TENANT_ID: {self.settings.TENANT_ID}")
-        print(f"[DEBUG] token_url: {self.token_url}")
+        logger.info("URL de token configurada", extra={"token_url": self.token_url})
+        logger.info("URL base configurada", extra={"base_url": self.base_url})
+        logger.debug("Debug manual", extra={"tenant_id": self.settings.TENANT_ID, "token_url": self.token_url})
 
     def get_access_token(self):
         """
@@ -34,8 +33,8 @@ class TeamsService:
             'grant_type': 'client_credentials'
         }
 
-        logger.info(f"[DEBUG] Corpo da requisição para token", extra={"data": data})
         logger.info("Solicitando token de acesso ao Azure AD", extra={"url": self.token_url})
+        logger.debug("Corpo da requisição", extra={"data": data})
 
         try:
             response = requests.post(self.token_url, data=data)
@@ -57,8 +56,8 @@ class TeamsService:
             })
             raise
 
-        except Exception as e:
-            logger.exception("Erro inesperado ao obter token de acesso")
+        except Exception: 
+            logger.exception("Erro inesperado ao solicitar token")
             raise
 
     def get_headers(self):
@@ -86,24 +85,28 @@ class TeamsService:
         """
         # Validação de e-mail para evitar entradas maliciosas, define o formato esperado
         # e verifica se o e-mail corresponde a esse formato.
-        email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+        email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
         if not re.match(email_regex, email):
             logger.warning("E-mail inválido fornecido para busca de usuário.")
             raise ValueError("Formato de e-mail inválido.")
         
         headers = self.get_headers()
         url = f"{self.base_url}/users/{email}"
-
         safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
+
         logger.info("Buscando usuário pelo e-mail", extra={"email": email, "url": url, "headers": safe_headers})
+        logger.debug("Cabeçalhos enviados", extra={"headers": safe_headers})
 
         try:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
-            user_id = response.json().get("id")
+            user_data = response.json()
+            user_id = user_data.get("id")
+
+            logger.debug("Dados do usuário obtidos", extra={"user_data": user_data})
 
             if not user_id:
-                logger.warning("ID de usuário não encontrado para o e-mail informado", extra={"email": email})
+                logger.warning("ID do usuário não encontrado na resposta", extra={"user_data": user_data})
                 raise ValueError("Usuário não encontrado.")
 
             logger.info("ID de usuário obtido com sucesso", extra={"user_id": user_id})
@@ -140,7 +143,7 @@ class TeamsService:
         }
 
 # Cria um novo dicionário chamado safe_headers, onde os valores de Authorization são substituídos por "***"
-        # para evitar exposição de informações sensíveis nos logs
+# para evitar exposição de informações sensíveis nos logs
         safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
 
         logger.info("Iniciando criação de chat com o usuário", extra={"user_id": user_id, "url": url})
@@ -198,7 +201,7 @@ class TeamsService:
             logger.debug("Cabeçalhos enviados", extra={"headers": safe_headers})
             logger.debug("Corpo da requisição", extra={"payload": payload})
 
-            response = requests.post(url, headers=safe_headers, json=payload)
+            response = requests.post(url, headers=headers, json=payload)
             logger.debug("Resposta da API", extra={"status_code": response.status_code, "body": response.text})
             response.raise_for_status()
 
