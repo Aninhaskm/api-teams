@@ -165,7 +165,7 @@ class TeamsService:
             "members": [{
                 "@odata.type": "#microsoft.graph.aadUserConversationMember",
                 "roles": ["owner"],
-                "user@odata.bind": f"{self.base_url}/users('{user_id}')"
+                "user@odata.bind": f"https://graph.microsoft.com/v1.0/users('{user_id}')"
             }]
         }
 
