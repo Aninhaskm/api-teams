@@ -163,7 +163,7 @@ class TeamsService:
         payload = {
             "chatType": "oneOnOne",
             "members": [{
-                "@data.type": "#microsoft.graph.aadUserConversationMember",
+                "@odata.type": "#microsoft.graph.aadUserConversationMember",
                 "roles": ["owner"],
                 "user@odata.bind": f"{self.base_url}/users('{user_id}')"
             }]
