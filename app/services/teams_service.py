@@ -17,9 +17,16 @@ class TeamsService:
         self.base_url = self.settings.GRAPH_API_ENDPOINT
         self.token_url = f"{self.settings.AUTHORITY}/{self.settings.TENANT_ID}/oauth2/v2.0/token"
 
-        logger.info("URL de token configurada", extra={"token_url": self.token_url})
-        logger.info("URL base configurada", extra={"base_url": self.base_url})
-        logger.debug("Debug manual", extra={"tenant_id": self.settings.TENANT_ID, "token_url": self.token_url})
+        logger.info("URL de token configurada", extra={
+            "token_url": self.token_url
+            })
+        logger.info("URL base configurada", extra={
+            "base_url": self.base_url
+            })
+        logger.debug("Debug manual", extra={
+            "tenant_id": self.settings.TENANT_ID,
+            "token_url": self.token_url
+            })
 
     def get_access_token(self):
         """
@@ -33,8 +40,12 @@ class TeamsService:
             'grant_type': 'client_credentials'
         }
 
-        logger.info("Solicitando token de acesso ao Azure AD", extra={"url": self.token_url})
-        logger.debug("Corpo da requisição", extra={"data": data})
+        logger.info("Solicitando token de acesso ao Azure AD", extra={
+            "url": self.token_url
+            })
+        logger.debug("Corpo da requisição", extra={
+            "data": data
+            })
 
         try:
             response = requests.post(self.token_url, data=data)
@@ -42,7 +53,9 @@ class TeamsService:
             token = response.json().get("access_token")
 
             if not token:
-                logger.error("Token não encontrado na resposta!", extra={"resposta": response.text})
+                logger.error("Token não encontrado na resposta!", extra={
+                    "resposta": response.text
+                    })
                 raise ValueError("Token de acesso ausente na resposta.")
             
             logger.info("Token de acesso obtido com sucesso")
@@ -71,7 +84,9 @@ class TeamsService:
         }
 
         safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
-        logger.debug("Cabeçalhos preparados (seguros)", extra={"headers": safe_headers})
+        logger.debug("Cabeçalhos preparados (seguros)", extra={
+            "headers": safe_headers
+            })
 
         return headers
 
@@ -94,8 +109,14 @@ class TeamsService:
         url = f"{self.base_url}/users/{email}"
         safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
 
-        logger.info("Buscando usuário pelo e-mail", extra={"email": email, "url": url, "headers": safe_headers})
-        logger.debug("Cabeçalhos enviados", extra={"headers": safe_headers})
+        logger.info("Buscando usuário pelo e-mail", extra={
+            "email": email,
+            "url": url,
+            "headers": safe_headers
+            })
+        logger.debug("Cabeçalhos enviados", extra={
+            "headers": safe_headers
+            })
 
         try:
             response = requests.get(url, headers=headers)
@@ -103,13 +124,19 @@ class TeamsService:
             user_data = response.json()
             user_id = user_data.get("id")
 
-            logger.debug("Dados do usuário obtidos", extra={"user_data": user_data})
+            logger.debug("Dados do usuário obtidos", extra={
+                "user_data": user_data
+                })
 
             if not user_id:
-                logger.warning("ID do usuário não encontrado na resposta", extra={"user_data": user_data})
+                logger.warning("ID do usuário não encontrado na resposta", extra={
+                    "user_data": user_data
+                    })
                 raise ValueError("Usuário não encontrado.")
 
-            logger.info("ID de usuário obtido com sucesso", extra={"user_id": user_id})
+            logger.info("ID de usuário obtido com sucesso", extra={
+                "user_id": user_id
+                })
             return user_id
         
         except requests.exceptions.RequestException as e:
@@ -146,13 +173,23 @@ class TeamsService:
 # para evitar exposição de informações sensíveis nos logs
         safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
 
-        logger.info("Iniciando criação de chat com o usuário", extra={"user_id": user_id, "url": url})
-        logger.debug("Cabeçalhos enviados", extra={"headers": safe_headers})
-        logger.debug("Corpo da requisição", extra={"payload": payload})
+        logger.info("Iniciando criação de chat com o usuário", extra={
+            "user_id": user_id,
+            "url": url
+            })
+        logger.debug("Cabeçalhos enviados", extra={
+            "headers": safe_headers
+            })
+        logger.debug("Corpo da requisição", extra={
+            "payload": payload
+            })
 
         try:
             response = requests.post(url, headers=headers, json=payload)
-            logger.debug("Resposta da API", extra={"status_code": response.status_code, "body": response.text})
+            logger.debug("Resposta da API", extra={
+                "status_code": response.status_code,
+                "body": response.text
+                })
 
             response.raise_for_status()
             chat_id = response.json().get("id")
@@ -161,7 +198,9 @@ class TeamsService:
                 logger.warning("ID do chat não retornado pela API.")
                 raise ValueError("Falha ao criar chat.")
 
-            logger.info("Chat criado com sucesso", extra={"chat_id": chat_id})
+            logger.info("Chat criado com sucesso", extra={
+                "chat_id": chat_id
+                })
             return chat_id
 
         except requests.exceptions.RequestException as e:
@@ -182,10 +221,14 @@ class TeamsService:
 
         try:
             user_id = self.get_user_id_by_email(user_email)
-            logger.info("ID do usuário obtido com sucesso", extra={"user_id": user_id})
+            logger.info("ID do usuário obtido com sucesso", extra={
+                "user_id": user_id
+                })
 
             chat_id = self.create_chat_with_user(user_id)
-            logger.info("Chat criado com sucesso", extra={"chat_id": chat_id})
+            logger.info("Chat criado com sucesso", extra={
+                "chat_id": chat_id
+                })
 
             headers = self.get_headers()
             safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
@@ -197,19 +240,32 @@ class TeamsService:
                 }
             }
 
-            logger.info("Enviando mensagem para o chat", extra={"url": url})
-            logger.debug("Cabeçalhos enviados", extra={"headers": safe_headers})
-            logger.debug("Corpo da requisição", extra={"payload": payload})
+            logger.info("Enviando mensagem para o chat", extra={
+                "url": url
+                })
+            logger.debug("Cabeçalhos enviados", extra={
+                "headers": safe_headers
+                })
+            logger.debug("Corpo da requisição", extra={
+                "payload": payload
+                })
 
             response = requests.post(url, headers=headers, json=payload)
-            logger.debug("Resposta da API", extra={"status_code": response.status_code, "body": response.text})
+            logger.debug("Resposta da API", extra={
+                "status_code": response.status_code,
+                "body": response.text})
             response.raise_for_status()
 
-            logger.info("Mensagem enviada com sucesso", extra={"chat_id": chat_id, "user_email": user_email})
+            logger.info("Mensagem enviada com sucesso", extra={
+                "chat_id": chat_id,
+                "user_email": user_email
+                })
             return response.json()
         
         except requests.exceptions.RequestException as e:
-            logger.error("Erro HTTP ao enviar a mensagem para o Graph API", extra={"erro": str(e)})
+            logger.error("Erro HTTP ao enviar a mensagem para o Graph API", extra={
+                "erro": str(e)
+                })
             raise ValueError("Erro ao enviar mensagem.")
 
         except Exception as e:
