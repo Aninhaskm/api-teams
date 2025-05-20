@@ -1,22 +1,16 @@
 """
-Configura o logger da aplicação Teams API.
-Formato limpo e em linha única com extras legíveis.
+Configura o logger para a aplicação Teams API.
+Utiliza python-json-logger para formatação estruturada dos logs.
 """
 import logging
-import sys
-
-# Configura o logger principal
-logger = logging.getLogger("API Teams")
-logger.setLevel(logging.DEBUG)
-
-# Handler padrão (console)
-handler = logging.StreamHandler(sys.stdout)
-
-# Formato customizado (linha única)
-formatter = logging.Formatter(
-    '[%(asctime)s] %(levelname)s %(name)s | %(message)s '
-    '[%(filename)s:%(lineno)d]'
+from pythonjsonlogger import jsonlogger
+ 
+logger = logging.getLogger("teams_api")
+logger.setLevel(logging.INFO)
+ 
+log_handler = logging.StreamHandler()
+formatter = jsonlogger.JsonFormatter(
+    '%(asctime)s %(levelname)s %(message)s %(name)s %(pathname)s %(lineno)d'
 )
-
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+log_handler.setFormatter(formatter)
+logger.addHandler(log_handler)

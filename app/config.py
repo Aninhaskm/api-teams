@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     SCOPE: str
     AUTHORITY: str
     GRAPH_API_ENDPOINT: str
+    SENDER_EMAIL: str
     
     class Config:
         env_file = ".env"

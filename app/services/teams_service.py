@@ -59,6 +59,7 @@ class TeamsService:
                 raise ValueError("Token de acesso ausente na resposta.")
             
             logger.info("Token de acesso obtido com sucesso")
+            logger.debug("Token de acesso obtido(parcial)", extra={"token": token[:20] + "..."})
             return token 
         
         except requests.exceptions.HTTPError as http_err:
@@ -149,11 +150,12 @@ class TeamsService:
             })
             raise ValueError("Erro ao buscar usuário.") from e
     
-    def create_chat_with_user(self, user_id: str) -> str:
+    def create_chat_with_user(self, sender_id: str, recipient_id: str) -> str:
         """
-        Cria um chat 1:1 com o usuário especificado pelo ID.
+        Cria um chat 1:1 entre o usuário autenticado (remetente) e o destinatário.
         Args:
-            user_id (str): ID do usuário para criar o chat.
+            sender_id (str): ID do usuário autenticado (remetente).
+            recipient_id (str): ID do destinatário.
         Returns:
             str: ID do chat criado.
         """
@@ -162,19 +164,23 @@ class TeamsService:
 
         payload = {
             "chatType": "oneOnOne",
-            "members": [{
-                "@odata.type": "#microsoft.graph.aadUserConversationMember",
-                "roles": ["owner"],
-                "user@odata.bind": f"https://graph.microsoft.com/v1.0/users('{user_id}')"
-            }]
+            "members": [
+                {
+                    "@odata.type": "#microsoft.graph.aadUserConversationMember",
+                    "roles": ["owner"],
+                    "user@odata.bind": f"https://graph.microsoft.com/v1.0/users('{sender_id}')"
+                },
+                {
+                    "@odata.type": "#microsoft.graph.aadUserConversationMember",
+                    "roles": ["owner"],
+                    "user@odata.bind": f"https://graph.microsoft.com/v1.0/users('{recipient_id}')"
+                }
+            ]
         }
-
-# Cria um novo dicionário chamado safe_headers, onde os valores de Authorization são substituídos por "***"
-# para evitar exposição de informações sensíveis nos logs
         safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
-
         logger.info("Iniciando criação de chat com o usuário", extra={
-            "user_id": user_id,
+            "sender_id": sender_id,
+            "recipient_id": recipient_id,
             "url": url
             })
         logger.debug("Cabeçalhos enviados", extra={
@@ -183,26 +189,21 @@ class TeamsService:
         logger.debug("Corpo da requisição", extra={
             "payload": payload
             })
-
         try:
             response = requests.post(url, headers=headers, json=payload)
             logger.debug("Resposta da API", extra={
                 "status_code": response.status_code,
                 "body": response.text
                 })
-
             response.raise_for_status()
             chat_id = response.json().get("id")
-
             if not chat_id:
                 logger.warning("ID do chat não retornado pela API.")
                 raise ValueError("Falha ao criar chat.")
-
             logger.info("Chat criado com sucesso", extra={
                 "chat_id": chat_id
                 })
             return chat_id
-
         except requests.exceptions.RequestException as e:
             logger.error("Erro ao criar chat no Graph API.")
             raise ValueError("Erro ao criar chat.") from e
@@ -218,28 +219,26 @@ class TeamsService:
             dict: Resposta da API Graph após envio da mensagem.
         """
         logger.info("Iniciando envio de mensagem")
-
         try:
-            user_id = self.get_user_id_by_email(user_email)
-            logger.info("ID do usuário obtido com sucesso", extra={
-                "user_id": user_id
+            sender_email = self.settings.SENDER_EMAIL
+            sender_id = self.get_user_id_by_email(sender_email)
+            recipient_id = self.get_user_id_by_email(user_email)
+            logger.info("IDs dos usuários obtidos com sucesso", extra={
+                "sender_id": sender_id,
+                "recipient_id": recipient_id
                 })
-
-            chat_id = self.create_chat_with_user(user_id)
+            chat_id = self.create_chat_with_user(sender_id, recipient_id)
             logger.info("Chat criado com sucesso", extra={
                 "chat_id": chat_id
                 })
-
             headers = self.get_headers()
             safe_headers = {k: ("***" if "Authorization" in k else v) for k, v in headers.items()}
             url = f"{self.base_url}/chats/{chat_id}/messages"
-    
             payload = {
                 "body": {
                     "content": content
                 }
             }
-
             logger.info("Enviando mensagem para o chat", extra={
                 "url": url
                 })
@@ -249,25 +248,21 @@ class TeamsService:
             logger.debug("Corpo da requisição", extra={
                 "payload": payload
                 })
-
             response = requests.post(url, headers=headers, json=payload)
             logger.debug("Resposta da API", extra={
                 "status_code": response.status_code,
                 "body": response.text})
             response.raise_for_status()
-
             logger.info("Mensagem enviada com sucesso", extra={
                 "chat_id": chat_id,
                 "user_email": user_email
                 })
             return response.json()
-        
         except requests.exceptions.RequestException as e:
             logger.error("Erro HTTP ao enviar a mensagem para o Graph API", extra={
                 "erro": str(e)
                 })
             raise ValueError("Erro ao enviar mensagem.")
-
         except Exception as e:
             logger.exception("Erro inesperado ao enviar mensagem")
             raise ValueError("Erro inesperado ao enviar mensagem.") from e
